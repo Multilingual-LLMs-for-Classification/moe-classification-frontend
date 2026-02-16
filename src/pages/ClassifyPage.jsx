@@ -13,7 +13,7 @@ export default function ClassifyPage() {
     setResult(null);
     setLoading(true);
     try {
-      const res = await client.post('/api/v1/classify', payload);
+      const res = await client.post('/api/v1/classify/test', payload);
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.detail || 'Classification failed');
