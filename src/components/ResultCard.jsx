@@ -33,7 +33,7 @@ export default function ResultCard({ result }) {
       </div>
 
       <div className="result-routing">
-        <span className="result-label">Routing Path</span>
+        <span className="result-label">Routing Path </span>
         <span className="routing-path">{result.routing_path}</span>
       </div>
 
