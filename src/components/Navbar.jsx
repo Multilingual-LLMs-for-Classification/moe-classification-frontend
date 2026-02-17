@@ -5,15 +5,13 @@ export default function Navbar() {
   const { isAuthenticated, username, logout } = useAuth();
 
   return (
-    <nav className="navbar">
+    <nav className="topbar">
       <div className="nav-brand">
         <NavLink to="/">MOE Classifier</NavLink>
       </div>
       <div className="nav-links">
         {isAuthenticated ? (
           <>
-            <NavLink to="/classify">Classify</NavLink>
-            <NavLink to="/dashboard">Dashboard</NavLink>
             <span className="nav-user">{username}</span>
             <button className="nav-logout" onClick={logout}>Logout</button>
           </>
