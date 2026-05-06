@@ -11,16 +11,8 @@ export default function ResultCard({ result }) {
           <span className="result-value result-main">{result.result}</span>
         </div>
         <div className="result-item">
-          <span className="result-label">Confidence</span>
-          <span className="result-value">{result.confidence ? `${(result.confidence * 100).toFixed(1)}%` : 'N/A'}</span>
-        </div>
-        <div className="result-item">
           <span className="result-label">Language</span>
           <span className="result-value">{result.language}</span>
-        </div>
-        <div className="result-item">
-          <span className="result-label">Domain</span>
-          <span className="result-value">{result.domain}</span>
         </div>
         <div className="result-item">
           <span className="result-label">Task</span>
@@ -37,24 +29,6 @@ export default function ResultCard({ result }) {
         <span className="routing-path">{result.routing_path}</span>
       </div>
 
-      {result.domain_probabilities && (
-        <div className="result-probs">
-          <span className="result-label">Domain Probabilities</span>
-          <div className="prob-bars">
-            {Object.entries(result.domain_probabilities)
-              .sort(([, a], [, b]) => b - a)
-              .map(([domain, prob]) => (
-                <div key={domain} className="prob-row">
-                  <span className="prob-name">{domain}</span>
-                  <div className="prob-bar-bg">
-                    <div className="prob-bar-fill" style={{ width: `${prob * 100}%` }} />
-                  </div>
-                  <span className="prob-pct">{(prob * 100).toFixed(1)}%</span>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
 
       {result.raw_response && (
         <div className="result-raw">

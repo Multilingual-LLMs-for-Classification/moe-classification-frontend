@@ -1,6 +1,12 @@
 import { useState } from 'react';
 
-export default function LanguageMappingEditor({ mappings, editing, onUpdate, onDelete, onAdd }) {
+const LANG_OPTIONS = [
+  'english', 'german', 'french', 'spanish', 'italian', 'portuguese',
+  'dutch', 'polish', 'russian', 'japanese', 'chinese', 'korean',
+  'arabic', 'turkish', 'swedish', 'danish', 'norwegian', 'finnish',
+];
+
+export default function LanguageMappingEditor({ mappings, editing, onUpdate, onDelete, onAdd, baseModelOptions = [] }) {
   const [newLang, setNewLang] = useState('');
   const [newMapping, setNewMapping] = useState({ base_model_key: '', adapter_name: '', adapter_path: '' });
   const [editDrafts, setEditDrafts] = useState({});
@@ -42,7 +48,39 @@ export default function LanguageMappingEditor({ mappings, editing, onUpdate, onD
     setNewMapping({ base_model_key: '', adapter_name: '', adapter_path: '' });
   };
 
+  const renderMappingField = (field, value, onChange) => {
+    if (field === 'base_model_key' && baseModelOptions.length > 0) {
+      return (
+        <select
+          className="kv-select"
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+        >
+          {(!value || !baseModelOptions.includes(value)) && (
+            <option value="" disabled>{value || '— select base model —'}</option>
+          )}
+          {baseModelOptions.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      );
+    }
+    return (
+      <input
+        className="kv-input"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        placeholder={field === 'adapter_name' ? 'adapter name' : field === 'adapter_path' ? '/path/to/adapter' : ''}
+      />
+    );
+  };
+
   const fields = ['base_model_key', 'adapter_name', 'adapter_path'];
+  const fieldLabels = {
+    base_model_key: 'Base Model',
+    adapter_name: 'Adapter',
+    adapter_path: 'Adapter Path',
+  };
 
   return (
     <div className="lang-mapping-editor">
@@ -69,12 +107,12 @@ export default function LanguageMappingEditor({ mappings, editing, onUpdate, onD
               <div className="kv-rows">
                 {fields.map(field => (
                   <div key={field} className="kv-row">
-                    <span className="kv-key">{field}</span>
-                    <input
-                      className="kv-input"
-                      value={editDrafts[lang][field] || ''}
-                      onChange={e => handleFieldChange(lang, field, e.target.value)}
-                    />
+                    <span className="kv-key">{fieldLabels[field] || field}</span>
+                    {renderMappingField(
+                      field,
+                      editDrafts[lang][field],
+                      (val) => handleFieldChange(lang, field, val),
+                    )}
                   </div>
                 ))}
               </div>
@@ -88,8 +126,8 @@ export default function LanguageMappingEditor({ mappings, editing, onUpdate, onD
               <div className="kv-rows">
                 {fields.map(field => (
                   <div key={field} className="kv-row">
-                    <span className="kv-key">{field}</span>
-                    <span className="kv-value">{mapping[field] || ''}</span>
+                    <span className="kv-key">{fieldLabels[field] || field}</span>
+                    <span className="kv-value">{mapping[field] || '—'}</span>
                   </div>
                 ))}
               </div>
@@ -104,27 +142,48 @@ export default function LanguageMappingEditor({ mappings, editing, onUpdate, onD
           <div className="kv-table">
             <div className="kv-rows">
               <div className="kv-row">
-                <span className="kv-key">Language Code</span>
-                <input
-                  className="kv-input"
+                <span className="kv-key">Language</span>
+                <select
+                  className="kv-select"
                   value={newLang}
                   onChange={e => setNewLang(e.target.value)}
-                  placeholder="e.g. fr, de, ja"
-                />
+                >
+                  <option value="" disabled>— select language —</option>
+                  {LANG_OPTIONS.filter(l => !mappings[l]).map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                  <option value="__custom__">other (type below)</option>
+                </select>
               </div>
-              {fields.map(field => (
-                <div key={field} className="kv-row">
-                  <span className="kv-key">{field}</span>
+              {newLang === '__custom__' && (
+                <div className="kv-row">
+                  <span className="kv-key">Custom Code</span>
                   <input
                     className="kv-input"
-                    value={newMapping[field]}
-                    onChange={e => setNewMapping(prev => ({ ...prev, [field]: e.target.value }))}
+                    placeholder="e.g. hindi"
+                    onChange={e => setNewLang(e.target.value === '' ? '__custom__' : e.target.value)}
                   />
+                </div>
+              )}
+              {fields.map(field => (
+                <div key={field} className="kv-row">
+                  <span className="kv-key">{fieldLabels[field] || field}</span>
+                  {renderMappingField(
+                    field,
+                    newMapping[field],
+                    (val) => setNewMapping(prev => ({ ...prev, [field]: val })),
+                  )}
                 </div>
               ))}
             </div>
             <div className="edit-actions">
-              <button className="btn-save" onClick={handleAdd} disabled={!newLang.trim()}>Add Mapping</button>
+              <button
+                className="btn-save"
+                onClick={handleAdd}
+                disabled={!newLang.trim() || newLang === '__custom__'}
+              >
+                Add Mapping
+              </button>
             </div>
           </div>
         </div>

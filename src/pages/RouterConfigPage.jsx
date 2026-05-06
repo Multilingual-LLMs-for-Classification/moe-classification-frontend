@@ -13,12 +13,11 @@ export default function RouterConfigPage() {
 
   return (
     <div className="page config-page">
-      <ConfigHeader title="Router Configuration" description="Domain classifier, Q-learning router, and training parameters." />
+      <ConfigHeader title="Router Configuration" description="Q-learning router and training parameters." />
 
       {routerConfig ? (
         <>
           <KeyValueTable title="Language Config" data={routerConfig.language_config} />
-          <KeyValueTable title="Domain Classifier" data={routerConfig.domain_config} />
           <KeyValueTable title="Q-Learning Router" data={routerConfig.qlearning_config} />
           <KeyValueTable title="Training" data={routerConfig.training} />
           <KeyValueTable title="Evaluation" data={routerConfig.evaluation} />

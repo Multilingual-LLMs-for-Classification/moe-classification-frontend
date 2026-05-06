@@ -1,30 +1,30 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { useNavigate } from 'react-router-dom';
-import {
-  getSummary, getTimeseries, getPerTask, getPerLanguage, getPerUser, getHistory, getPerProject,
-} from '../api/analytics';
+import { projectsApi } from '../api/projects';
 
-const TABS = ['Overview', 'Per Task', 'Per Language', 'Per User', 'Per Project', 'History'];
+const TABS = ['Overview', 'Per Task', 'Per Language', 'Per User', 'History'];
 
-export default function AnalyticsPage() {
+export default function ProjectAnalyticsPage() {
+  const { projectId } = useParams();
+  const id = Number(projectId);
   const [activeTab, setActiveTab] = useState('Overview');
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState('');
   const intervalRef = useRef(null);
 
   const fetchSummary = useCallback(async () => {
     try {
-      const data = await getSummary();
+      const data = await projectsApi.getSummary(id);
       setSummary(data);
       setError('');
     } catch {
-      setError('Failed to fetch analytics summary.');
+      setError('Failed to fetch analytics.');
     }
-  }, []);
+  }, [id]);
 
   useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
@@ -35,12 +35,9 @@ export default function AnalyticsPage() {
   }, [autoRefresh, fetchSummary]);
 
   return (
-    <div className="page analytics-page">
-      <div className="analytics-header">
-        <div>
-          <h1>Analytics <span className="global-badge">Global</span></h1>
-          <p className="page-desc">All classifications across every project — system-wide view.</p>
-        </div>
+    <div className="project-section">
+      <div className="analytics-header" style={{ marginBottom: '1rem' }}>
+        <div />
         <div className="analytics-controls">
           <label className="auto-refresh-toggle">
             <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
@@ -65,12 +62,11 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {activeTab === 'Overview' && <OverviewTab summary={summary} />}
-      {activeTab === 'Per Task' && <PerTaskTab />}
-      {activeTab === 'Per Language' && <PerLanguageTab />}
-      {activeTab === 'Per User' && <PerUserTab />}
-      {activeTab === 'Per Project' && <PerProjectTab />}
-      {activeTab === 'History' && <HistoryTab />}
+      {activeTab === 'Overview' && <OverviewTab id={id} summary={summary} />}
+      {activeTab === 'Per Task' && <PerTaskTab id={id} />}
+      {activeTab === 'Per Language' && <PerLanguageTab id={id} />}
+      {activeTab === 'Per User' && <PerUserTab id={id} />}
+      {activeTab === 'History' && <HistoryTab id={id} />}
     </div>
   );
 }
@@ -99,23 +95,23 @@ function KpiCards({ data }) {
   );
 }
 
-function OverviewTab({ summary }) {
+function OverviewTab({ id, summary }) {
   const [tsData, setTsData] = useState([]);
-  const [bucket, setBucket] = useState('hour');
-  const [days, setDays] = useState(7);
+  const [bucket, setBucket] = useState('day');
+  const [days, setDays] = useState(14);
   const [tsLoading, setTsLoading] = useState(true);
 
   const fetchTs = useCallback(async () => {
     setTsLoading(true);
     try {
-      const data = await getTimeseries(bucket, days);
+      const data = await projectsApi.getTimeseries(id, bucket, days);
       setTsData(data);
     } catch {
       setTsData([]);
     } finally {
       setTsLoading(false);
     }
-  }, [bucket, days]);
+  }, [id, bucket, days]);
 
   useEffect(() => { fetchTs(); }, [fetchTs]);
 
@@ -154,10 +150,7 @@ function OverviewTab({ summary }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#2e3248" />
               <XAxis dataKey="label" tick={{ fill: '#8b8fa3', fontSize: 11 }} />
               <YAxis tick={{ fill: '#8b8fa3', fontSize: 11 }} allowDecimals={false} />
-              <Tooltip
-                contentStyle={{ background: '#1a1d27', border: '1px solid #2e3248', borderRadius: 8 }}
-                labelStyle={{ color: '#e4e6ef' }}
-              />
+              <Tooltip contentStyle={{ background: '#1a1d27', border: '1px solid #2e3248', borderRadius: 8 }} labelStyle={{ color: '#e4e6ef' }} />
               <Legend wrapperStyle={{ color: '#8b8fa3', fontSize: 12 }} />
               <Line type="monotone" dataKey="success" stroke="#6366f1" strokeWidth={2} dot={false} name="Success" />
               <Line type="monotone" dataKey="errors" stroke="#ef4444" strokeWidth={2} dot={false} name="Errors" />
@@ -173,7 +166,7 @@ function OverviewTab({ summary }) {
         </div>
       )}
 
-      {summary && (
+      {summary && summary.recent_requests.length > 0 && (
         <div className="analytics-section">
           <h3>Recent Classifications</h3>
           <RecentTable requests={summary.recent_requests} />
@@ -183,16 +176,13 @@ function OverviewTab({ summary }) {
   );
 }
 
-function PerTaskTab() {
+function PerTaskTab({ id }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    getPerTask().then(setData).catch(() => setData([])).finally(() => setLoading(false));
-  }, []);
-
+    projectsApi.getPerTask(id).then(setData).catch(() => setData([])).finally(() => setLoading(false));
+  }, [id]);
   if (loading) return <div className="loading-msg">Loading per-task metrics...</div>;
-
   return (
     <div className="analytics-section">
       <h3>Per-Task Breakdown</h3>
@@ -212,16 +202,13 @@ function PerTaskTab() {
   );
 }
 
-function PerLanguageTab() {
+function PerLanguageTab({ id }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    getPerLanguage().then(setData).catch(() => setData([])).finally(() => setLoading(false));
-  }, []);
-
+    projectsApi.getPerLanguage(id).then(setData).catch(() => setData([])).finally(() => setLoading(false));
+  }, [id]);
   if (loading) return <div className="loading-msg">Loading per-language metrics...</div>;
-
   return (
     <div className="analytics-section">
       <h3>Per-Language Breakdown</h3>
@@ -241,16 +228,13 @@ function PerLanguageTab() {
   );
 }
 
-function PerUserTab() {
+function PerUserTab({ id }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    getPerUser().then(setData).catch(() => setData([])).finally(() => setLoading(false));
-  }, []);
-
+    projectsApi.getPerUser(id).then(setData).catch(() => setData([])).finally(() => setLoading(false));
+  }, [id]);
   if (loading) return <div className="loading-msg">Loading per-user metrics...</div>;
-
   return (
     <div className="analytics-section">
       <h3>Per-User Usage</h3>
@@ -269,10 +253,10 @@ function PerUserTab() {
   );
 }
 
-function HistoryTab() {
+function HistoryTab({ id }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ task: '', language: '', username: '' });
+  const [filters, setFilters] = useState({ task: '', language: '' });
   const [page, setPage] = useState(1);
 
   const fetchHistory = useCallback(async () => {
@@ -281,110 +265,64 @@ function HistoryTab() {
       const params = { page, page_size: 20 };
       if (filters.task) params.task = filters.task;
       if (filters.language) params.language = filters.language;
-      if (filters.username) params.username = filters.username;
-      setData(await getHistory(params));
+      setData(await projectsApi.getHistory(id, params));
     } catch {
       setData(null);
     } finally {
       setLoading(false);
     }
-  }, [page, filters]);
+  }, [id, page, filters]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
-
-  const handleFilter = (e) => { e.preventDefault(); setPage(1); };
-  const handleClear = () => { setFilters({ task: '', language: '', username: '' }); setPage(1); };
 
   return (
     <div className="analytics-section">
       <h3>Request History</h3>
-
-      <form className="history-filters" onSubmit={handleFilter}>
+      <form className="history-filters" onSubmit={(e) => { e.preventDefault(); setPage(1); }}>
         <input placeholder="Task" value={filters.task} onChange={(e) => setFilters((f) => ({ ...f, task: e.target.value }))} />
         <input placeholder="Language" value={filters.language} onChange={(e) => setFilters((f) => ({ ...f, language: e.target.value }))} />
-        <input placeholder="Username" value={filters.username} onChange={(e) => setFilters((f) => ({ ...f, username: e.target.value }))} />
         <button type="submit" className="btn-filter">Filter</button>
-        <button type="button" className="btn-filter secondary" onClick={handleClear}>Clear</button>
+        <button type="button" className="btn-filter secondary" onClick={() => { setFilters({ task: '', language: '' }); setPage(1); }}>Clear</button>
       </form>
 
-      {loading ? (
-        <div className="loading-msg">Loading history...</div>
-      ) : !data ? (
-        <p className="no-data">Failed to load history.</p>
-      ) : data.items.length === 0 ? (
-        <p className="no-data">No records found.</p>
-      ) : (
-        <>
-          <MetricsTable
-            columns={['Time', 'User', 'Language', 'Task', 'Result', 'Latency', 'Status']}
-            rows={data.items.map((row) => [
-              <span className="time-cell">{new Date(row.timestamp).toLocaleString()}</span>,
-              row.username || '—',
-              row.language || '—',
-              row.task || '—',
-              <span className="mono-cell">{row.result || '—'}</span>,
-              <span className="latency-cell">{row.processing_time_ms != null ? `${row.processing_time_ms.toFixed(0)}ms` : '—'}</span>,
-              <span className={`status-badge ${row.is_error ? 'status-warn' : 'status-ok'}`}>{row.is_error ? 'Error' : 'OK'}</span>,
-            ])}
-          />
-          <div className="pagination">
-            <span className="pagination-info">
-              {data.total.toLocaleString()} total — page {data.page} of {data.pages}
-            </span>
-            <div className="pagination-btns">
-              <button className="btn-page" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
-              <button className="btn-page" disabled={page >= data.pages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+      {loading ? <div className="loading-msg">Loading...</div>
+        : !data ? <p className="no-data">Failed to load history.</p>
+        : data.items.length === 0 ? <p className="no-data">No records found.</p>
+        : (
+          <>
+            <MetricsTable
+              columns={['Time', 'User', 'Language', 'Task', 'Result', 'Latency', 'Status']}
+              rows={data.items.map((row) => [
+                <span className="time-cell">{new Date(row.timestamp).toLocaleString()}</span>,
+                row.username || '—',
+                row.language || '—',
+                row.task || '—',
+                <span className="mono-cell">{row.result || '—'}</span>,
+                <span className="latency-cell">{row.processing_time_ms != null ? `${row.processing_time_ms.toFixed(0)}ms` : '—'}</span>,
+                <span className={`status-badge ${row.is_error ? 'status-warn' : 'status-ok'}`}>{row.is_error ? 'Error' : 'OK'}</span>,
+              ])}
+            />
+            <div className="pagination">
+              <span className="pagination-info">{data.total.toLocaleString()} total — page {data.page} of {data.pages}</span>
+              <div className="pagination-btns">
+                <button className="btn-page" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+                <button className="btn-page" disabled={page >= data.pages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
     </div>
   );
 }
 
-function PerProjectTab() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    getPerProject().then(setData).catch(() => setData([])).finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="loading-msg">Loading per-project metrics...</div>;
-
-  return (
-    <div className="analytics-section">
-      <h3>Per-Project Breakdown</h3>
-      {data.length === 0 ? <p className="no-data">No project data yet.</p> : (
-        <MetricsTable
-          columns={['Project', 'Requests', 'Errors', 'Error Rate', 'Avg Latency', '']}
-          rows={data.map((row) => [
-            <span className="task-name-cell">{row.project_name}</span>,
-            row.total_requests.toLocaleString(),
-            <span className={row.error_count > 0 ? 'error-cell' : ''}>{row.error_count}</span>,
-            <span className={row.error_rate > 0.05 ? 'error-cell' : ''}>{(row.error_rate * 100).toFixed(1)}%</span>,
-            <span className="latency-cell">{row.avg_latency_ms != null ? `${row.avg_latency_ms.toFixed(0)}ms` : '—'}</span>,
-            <button className="btn-link-sm" onClick={() => navigate(`/projects/${row.project_id}/analytics`)}>View →</button>,
-          ])}
-        />
-      )}
-    </div>
-  );
-}
+// ── Shared display components ──
 
 function MetricsTable({ columns, rows }) {
   return (
     <div className="metrics-table-wrapper">
       <table className="metrics-table">
-        <thead>
-          <tr>{columns.map((col) => <th key={col}>{col}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((cells, i) => (
-            <tr key={i}>{cells.map((cell, j) => <td key={j}>{cell}</td>)}</tr>
-          ))}
-        </tbody>
+        <thead><tr>{columns.map((col) => <th key={col}>{col}</th>)}</tr></thead>
+        <tbody>{rows.map((cells, i) => <tr key={i}>{cells.map((cell, j) => <td key={j}>{cell}</td>)}</tr>)}</tbody>
       </table>
     </div>
   );
@@ -392,7 +330,7 @@ function MetricsTable({ columns, rows }) {
 
 function DistributionCard({ title, data }) {
   const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
-  const maxCount = Math.max(...entries.map(([, count]) => count), 1);
+  const maxCount = Math.max(...entries.map(([, c]) => c), 1);
   return (
     <div className="analytics-card">
       <h3>{title}</h3>
@@ -401,9 +339,7 @@ function DistributionCard({ title, data }) {
           {entries.map(([label, count]) => (
             <div key={label} className="bar-row">
               <div className="bar-label">{label}</div>
-              <div className="bar-container">
-                <div className="bar-fill" style={{ width: `${(count / maxCount) * 100}%` }} />
-              </div>
+              <div className="bar-container"><div className="bar-fill" style={{ width: `${(count / maxCount) * 100}%` }} /></div>
               <div className="bar-count">{count}</div>
             </div>
           ))}
@@ -414,7 +350,6 @@ function DistributionCard({ title, data }) {
 }
 
 function RecentTable({ requests }) {
-  if (!requests || requests.length === 0) return <p className="no-data">No recent requests</p>;
   return (
     <MetricsTable
       columns={['Time', 'User', 'Language', 'Task', 'Latency']}

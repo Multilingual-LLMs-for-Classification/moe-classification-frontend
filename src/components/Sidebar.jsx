@@ -1,21 +1,27 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useActiveProject } from '../context/ActiveProjectContext';
 
 export default function Sidebar() {
   const { isAuthenticated } = useAuth();
+  const { activeProject } = useActiveProject();
   const [collapsed, setCollapsed] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const location = useLocation();
 
   const isConfigRoute = location.pathname.startsWith('/config');
 
-  // Auto-open config sub-menu when navigating to a config route
   useEffect(() => {
     if (isConfigRoute && !configOpen) setConfigOpen(true);
   }, [isConfigRoute]);
 
   if (!isAuthenticated) return null;
+
+  // Show project sub-nav if URL is inside a project OR an active project is selected
+  const urlProjectMatch = location.pathname.match(/^\/projects\/(\d+)(\/.*)?$/);
+  const urlProjectId = urlProjectMatch ? urlProjectMatch[1] : null;
+  const activeProjectId = urlProjectId || (activeProject ? String(activeProject.id) : null);
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -37,9 +43,30 @@ export default function Sidebar() {
         <NavLink to="/analytics" className="sidebar-item">
           <span className="sidebar-icon">&#9650;</span>
           {!collapsed && <span className="sidebar-label">Analytics</span>}
+          {!collapsed && <span className="sidebar-badge">Global</span>}
         </NavLink>
 
-        {/* Configuration with sub-items */}
+        <NavLink to="/projects" className="sidebar-item" end>
+          <span className="sidebar-icon">&#9783;</span>
+          {!collapsed && <span className="sidebar-label">Projects</span>}
+        </NavLink>
+
+        {/* Project sub-nav: shown when browsing a project URL or an active project is selected */}
+        {activeProjectId && !collapsed && (
+          <div className="sidebar-subitems sidebar-project-subitems">
+            <div className="sidebar-project-label">
+              {activeProject && !urlProjectId ? activeProject.name : 'Project'}
+            </div>
+            <NavLink to={`/projects/${activeProjectId}/analytics`} className="sidebar-subitem">
+              Analytics
+            </NavLink>
+            <NavLink to={`/projects/${activeProjectId}/config`} className="sidebar-subitem">
+              Configuration
+            </NavLink>
+          </div>
+        )}
+
+        {/* Global Configuration */}
         <div className="sidebar-group">
           <button
             className={`sidebar-item sidebar-group-toggle ${isConfigRoute ? 'active' : ''}`}
@@ -56,15 +83,8 @@ export default function Sidebar() {
 
           {configOpen && !collapsed && (
             <div className="sidebar-subitems">
-              <NavLink to="/config/base-models" className="sidebar-subitem">
-                Base Models
-              </NavLink>
-              <NavLink to="/config/tasks" className="sidebar-subitem">
-                Tasks
-              </NavLink>
-              <NavLink to="/config/router" className="sidebar-subitem">
-                Router Config
-              </NavLink>
+              <NavLink to="/config/base-models" className="sidebar-subitem">Base Models</NavLink>
+              <NavLink to="/config/router" className="sidebar-subitem">Router Config</NavLink>
             </div>
           )}
         </div>

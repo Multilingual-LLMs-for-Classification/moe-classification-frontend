@@ -3,7 +3,6 @@ import { useState } from 'react';
 export default function ClassifyForm({ onSubmit, loading }) {
   const [description, setDescription] = useState('');
   const [text, setText] = useState('');
-  const [returnProbs, setReturnProbs] = useState(false);
   const [returnRaw, setReturnRaw] = useState(false);
 
   const handleSubmit = (e) => {
@@ -12,7 +11,6 @@ export default function ClassifyForm({ onSubmit, loading }) {
       description,
       text,
       options: {
-        return_probabilities: returnProbs,
         return_raw_response: returnRaw,
       },
     });
@@ -43,10 +41,6 @@ export default function ClassifyForm({ onSubmit, loading }) {
       </div>
 
       <div className="form-options">
-        <label className="checkbox-label">
-          <input type="checkbox" checked={returnProbs} onChange={(e) => setReturnProbs(e.target.checked)} />
-          Return domain probabilities
-        </label>
         <label className="checkbox-label">
           <input type="checkbox" checked={returnRaw} onChange={(e) => setReturnRaw(e.target.checked)} />
           Return raw response
